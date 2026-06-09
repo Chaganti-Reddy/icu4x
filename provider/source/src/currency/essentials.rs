@@ -289,14 +289,8 @@ fn extract_currency_essentials<'data>(
             }
         };
 
-    /// Create a `DoublePlaceholderPattern` from a string pattern (positive subpattern).
-    fn create_positive_pattern<'data>(
-        pattern: &NumberPattern,
-    ) -> Result<Cow<'data, DoublePlaceholderPattern>, DataError> {
-        // TODO: The currency pattern does not necessarily match standard decimal formatting.
-        // We should parse the numeric block (#,##0.00) for custom grouping sizes or numbering system overrides
-        // rather than collapsing it entirely into Place0.
-        let pattern_items = pattern.positive.iter().flat_map(|item| match item {
+    fn map_number_pattern_item(item: &NumberPatternItem) -> Option<PatternItemCow<'_, DoublePlaceholderKey>> {
+        match item {
             NumberPatternItem::Currency => {
                 Some(PatternItemCow::Placeholder(DoublePlaceholderKey::Place1))
             }
@@ -305,8 +299,17 @@ fn extract_currency_essentials<'data>(
                 Some(PatternItemCow::Placeholder(DoublePlaceholderKey::Place0))
             }
             _ => None,
-        });
+        }
+    }
 
+    /// Create a `DoublePlaceholderPattern` from a string pattern (positive subpattern).
+    fn create_positive_pattern<'data>(
+        pattern: &NumberPattern,
+    ) -> Result<Cow<'data, DoublePlaceholderPattern>, DataError> {
+        // TODO: The currency pattern does not necessarily match standard decimal formatting.
+        // We should parse the numeric block (#,##0.00) for custom grouping sizes or numbering system overrides
+        // rather than collapsing it entirely into Place0.
+        let pattern_items = pattern.positive.iter().flat_map(map_number_pattern_item);
         DoublePlaceholderPattern::try_from_items(pattern_items.into_iter())
             .map_err(|e| {
                 DataError::custom("Could not parse positive pattern").with_display_context(&e)
@@ -318,37 +321,16 @@ fn extract_currency_essentials<'data>(
         pattern: &NumberPattern,
     ) -> Result<Cow<'data, DoublePlaceholderPattern>, DataError> {
         if let Some(negative_items) = &pattern.negative {
-            let pattern_items = negative_items.iter().flat_map(|item| match item {
-                NumberPatternItem::Currency => {
-                    Some(PatternItemCow::Placeholder(DoublePlaceholderKey::Place1))
-                }
-                NumberPatternItem::Literal(s) => Some(PatternItemCow::Literal(Cow::Borrowed(s))),
-                NumberPatternItem::DecimalSeparator => {
-                    Some(PatternItemCow::Placeholder(DoublePlaceholderKey::Place0))
-                }
-                _ => None,
-            });
-
+            let pattern_items = negative_items.iter().flat_map(map_number_pattern_item);
             DoublePlaceholderPattern::try_from_items(pattern_items.into_iter())
                 .map_err(|e| {
                     DataError::custom("Could not parse negative pattern").with_display_context(&e)
                 })
                 .map(Cow::Owned)
         } else {
-            let positive_items = pattern.positive.iter().flat_map(|item| match item {
-                NumberPatternItem::Currency => {
-                    Some(PatternItemCow::Placeholder(DoublePlaceholderKey::Place1))
-                }
-                NumberPatternItem::Literal(s) => Some(PatternItemCow::Literal(Cow::Borrowed(s))),
-                NumberPatternItem::DecimalSeparator => {
-                    Some(PatternItemCow::Placeholder(DoublePlaceholderKey::Place0))
-                }
-                _ => None,
-            });
-
+            let positive_items = pattern.positive.iter().flat_map(map_number_pattern_item);
             let negative_items =
                 std::iter::once(PatternItemCow::Literal(Cow::Borrowed("-"))).chain(positive_items);
-
             DoublePlaceholderPattern::try_from_items(negative_items)
                 .map_err(|e| {
                     DataError::custom("Could not parse fallback negative pattern")
