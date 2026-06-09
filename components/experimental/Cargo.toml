@@ -26,6 +26,13 @@ all-features = true
 [package.metadata.cargo-all-features]
 max_combination_size = 3
 
+[package.metadata.cargo-semver-checks.lints]
+workspace = true
+# icu_experimental is entirely unstable ("may change at any time, in breaking
+# or non-breaking ways, including in SemVer minor releases"), so adding new
+# fields to publicly-constructible data structs does not require suppression.
+constructible_struct_adds_field = "allow"
+
 [dependencies]
 
 icu_collections = { workspace = true }

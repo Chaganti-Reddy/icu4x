@@ -81,6 +81,46 @@ pub struct CurrencyEssentials<'data> {
     )]
     pub standard_alpha_next_to_number_pattern: Cow<'data, DoublePlaceholderPattern>,
 
+    /// The positive accounting currency pattern used for formatting.
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            borrow,
+            deserialize_with = "icu_pattern::deserialize_borrowed_cow::<DoublePlaceholder, _>"
+        )
+    )]
+    pub accounting_positive_pattern: Cow<'data, DoublePlaceholderPattern>,
+
+    /// The negative accounting currency pattern used for formatting.
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            borrow,
+            deserialize_with = "icu_pattern::deserialize_borrowed_cow::<DoublePlaceholder, _>"
+        )
+    )]
+    pub accounting_negative_pattern: Cow<'data, DoublePlaceholderPattern>,
+
+    /// The positive `accounting_alpha_next_to_number` currency pattern used for formatting.
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            borrow,
+            deserialize_with = "icu_pattern::deserialize_borrowed_cow::<DoublePlaceholder, _>"
+        )
+    )]
+    pub accounting_alpha_next_to_number_positive_pattern: Cow<'data, DoublePlaceholderPattern>,
+
+    /// The negative `accounting_alpha_next_to_number` currency pattern used for formatting.
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            borrow,
+            deserialize_with = "icu_pattern::deserialize_borrowed_cow::<DoublePlaceholder, _>"
+        )
+    )]
+    pub accounting_alpha_next_to_number_negative_pattern: Cow<'data, DoublePlaceholderPattern>,
+
     /// A list of placeholders (strings), such as currency symbols, referenced by index.
     ///
     /// These values are retrieved using [`PlaceholderValue::Index`] stored in [`CurrencyPatternConfig`].
