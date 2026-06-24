@@ -348,7 +348,15 @@ jobs:
         # sdk: ${{ github.event_name == 'schedule' && github.event.schedule == '0 14 * * *' && 'dev' || '3.11.0-46.0.dev' }}
     - name: Install yq if Windows
       if: ${{ matrix.os == 'windows-latest' }}
-      run: choco install yq
+      shell: pwsh
+      run: |
+        choco install yq -y
+        if ($LASTEXITCODE -ne 0) {
+          $version = "v4.48.1"
+          $yq = "$env:RUNNER_TEMP\yq.exe"
+          Invoke-WebRequest -Uri "https://github.com/mikefarah/yq/releases/download/$version/yq_windows_amd64.exe" -OutFile $yq
+          "$env:RUNNER_TEMP" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        }
 
     # Actual job
     - name: Run `cargo make ci-job-test-dart`
