@@ -354,7 +354,27 @@ jobs:
         if ($LASTEXITCODE -ne 0) {
           $version = "v4.48.1"
           $yq = "$env:RUNNER_TEMP\yq.exe"
-          Invoke-WebRequest -Uri "https://github.com/mikefarah/yq/releases/download/$version/yq_windows_amd64.exe" -OutFile $yq
+          try {
+            $checksums = Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/mikefarah/yq/releases/download/$version/checksums"
+          } catch {
+            throw "Failed to download yq checksums for $version: $($_.Exception.Message)"
+          }
+          try {
+            Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/mikefarah/yq/releases/download/$version/yq_windows_amd64.exe" -OutFile $yq
+          } catch {
+            throw "Failed to download yq binary for $version: $($_.Exception.Message)"
+          }
+          $checksumLines = $checksums.Content -split "(`r)?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+          $checksumEntries = $checksumLines | ForEach-Object { $_ -split "\s+" }
+          $checksumParts = $checksumEntries | Where-Object { $_.Length -ge 2 -and $_[1] -eq "yq_windows_amd64.exe" } | Select-Object -First 1
+          if (!$checksumParts) {
+            throw "Missing checksum for yq_windows_amd64.exe"
+          }
+          $expectedHash = $checksumParts[0].ToLower()
+          $actualHash = (Get-FileHash -Path $yq -Algorithm SHA256).Hash.ToLower()
+          if ($actualHash -ne $expectedHash) {
+            throw "yq download checksum mismatch"
+          }
           "$env:RUNNER_TEMP" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         }
 
