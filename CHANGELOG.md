@@ -12,7 +12,9 @@ Several crates have had patch releases in the 2.2 stream:
         - Fix panic when using `AlternateHandling::Shifted` with `MaxVariable::Currency` (off-by-one in special primaries validation). (unicode-org#8081)
 - FFI
     - (2.2.1) `icu` NPM package
-        -Fix an issue in JS bindings where enums in objects were not parsed correctly
+        - Fix an issue in JS bindings where enums in objects were not parsed correctly
+    - (2.2.0.dev.2) `icu4x` Dart package
+        - Update `package:hooks` dependency and change required toolchain to `3.13.0-215.0.dev`
 
 ## icu4x 2.2
 
