@@ -5,7 +5,7 @@
 use crate::provider::*;
 
 use icu_locale_core::LanguageIdentifier;
-use icu_locale_core::subtags::{Language, Region, Script};
+use icu_locale_core::subtags::{Language, Region, Script, region, script};
 use icu_provider::prelude::*;
 
 use crate::TransformResult;
@@ -376,6 +376,13 @@ impl LocaleExpander {
         let data = self.as_borrowed();
         let (und_l, und_s, und_r) = data.get_und();
 
+        if langid.script == Some(script!("Zzzz")) {
+            langid.script = None;
+        }
+        if langid.region == Some(region!("ZZ")) {
+            langid.region = None;
+        }
+
         if !langid.language.is_unknown() && langid.script.is_some() && langid.region.is_some() {
             return TransformResult::Unmodified;
         }
@@ -669,5 +676,22 @@ mod tests {
         assert_eq!(lc.maximize(&mut locale.id), TransformResult::Unmodified);
         locale = locale!("tlh-SA");
         assert_eq!(lc.maximize(&mut locale.id), TransformResult::Unmodified);
+    }
+
+    #[test]
+    fn test_maximize_strips_placeholder_subtags() {
+        let lc = LocaleExpander::new_extended();
+
+        let mut locale = locale!("de-Latn-ZZ");
+        assert_eq!(lc.maximize(&mut locale.id), TransformResult::Modified);
+        assert_eq!(locale, locale!("de-Latn-DE"));
+
+        let mut locale = locale!("de-Zzzz-DE");
+        assert_eq!(lc.maximize(&mut locale.id), TransformResult::Modified);
+        assert_eq!(locale, locale!("de-Latn-DE"));
+
+        let mut locale = locale!("de-Zzzz-ZZ");
+        assert_eq!(lc.maximize(&mut locale.id), TransformResult::Modified);
+        assert_eq!(locale, locale!("de-Latn-DE"));
     }
 }
