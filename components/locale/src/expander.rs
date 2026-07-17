@@ -557,6 +557,8 @@ impl LocaleExpander {
         let data = self.as_borrowed();
         let (und_l, und_s, und_r) = data.get_und();
 
+        let region = region.filter(|r| *r != region!("ZZ"));
+
         if !language.is_unknown() {
             if let Some(region) = region
                 && let Some(script) = data.get_lr(language, region)
