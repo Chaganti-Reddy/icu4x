@@ -376,12 +376,22 @@ impl LocaleExpander {
         let data = self.as_borrowed();
         let (und_l, und_s, und_r) = data.get_und();
 
+        // Stripping a placeholder is itself a modification, even if no further
+        // maximization data is found afterwards (e.g. `und-Zzzz-ZZ` -> `und`).
+        let mut stripped_placeholder = false;
         if langid.script == Some(script!("Zzzz")) {
             langid.script = None;
+            stripped_placeholder = true;
         }
         if langid.region == Some(region!("ZZ")) {
             langid.region = None;
+            stripped_placeholder = true;
         }
+        let no_data_found_result = if stripped_placeholder {
+            TransformResult::Modified
+        } else {
+            TransformResult::Unmodified
+        };
 
         if !langid.language.is_unknown() && langid.script.is_some() && langid.region.is_some() {
             return TransformResult::Unmodified;
@@ -401,8 +411,9 @@ impl LocaleExpander {
             if let Some((script, region)) = data.get_l(langid.language) {
                 return update_langid(Language::UNKNOWN, Some(script), Some(region), langid);
             }
-            // Language not found: return unmodified.
-            return TransformResult::Unmodified;
+            // Language not found: return unmodified, unless we already
+            // stripped a placeholder subtag.
+            return no_data_found_result;
         }
         if let Some(script) = langid.script {
             if let Some(region) = langid.region
@@ -431,7 +442,7 @@ impl LocaleExpander {
         // to fall back to bare "und"
         debug_assert!(langid.language.is_unknown());
 
-        TransformResult::Unmodified
+        no_data_found_result
     }
 
     /// This returns a new Locale that is the result of running the
@@ -695,5 +706,20 @@ mod tests {
         let mut locale = locale!("de-Zzzz-ZZ");
         assert_eq!(lc.maximize(&mut locale.id), TransformResult::Modified);
         assert_eq!(locale, locale!("de-Latn-DE"));
+    }
+
+    #[test]
+    fn test_maximize_strips_placeholder_subtags_no_further_data() {
+        let lc = LocaleExpander::new_extended();
+
+        // Stripping the placeholders is itself a modification, even when no
+        // further maximization data is found afterwards.
+        let mut locale = locale!("und-Zzzz-ZZ");
+        assert_eq!(lc.maximize(&mut locale.id), TransformResult::Modified);
+        assert_eq!(locale, locale!("und"));
+
+        let mut locale = locale!("tlh-Zzzz-ZZ");
+        assert_eq!(lc.maximize(&mut locale.id), TransformResult::Modified);
+        assert_eq!(locale, locale!("tlh"));
     }
 }
