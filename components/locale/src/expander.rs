@@ -560,6 +560,7 @@ impl LocaleExpander {
     pub fn get_likely_script(&self, langid: &LanguageIdentifier) -> Option<Script> {
         langid
             .script
+            .filter(|s| *s != script!("Zzzz"))
             .or_else(|| self.infer_likely_script(langid.language, langid.region))
     }
 
@@ -656,6 +657,13 @@ mod tests {
         assert_eq!(lc.get_likely_script(&locale!("tlh").id), None);
         assert_eq!(lc.get_likely_script(&locale!("tlh-US").id), None);
         assert_eq!(lc.get_likely_script(&locale!("tlh-SA").id), None);
+
+        // A placeholder 'Zzzz' script on the input shouldn't be returned
+        // verbatim; it should be treated like no script at all.
+        assert_eq!(
+            lc.get_likely_script(&locale!("de-Zzzz").id),
+            Some(script!("Latn"))
+        );
     }
 
     #[test]
