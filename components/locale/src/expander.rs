@@ -378,23 +378,18 @@ impl LocaleExpander {
 
         // Stripping a placeholder is itself a modification, even if no further
         // maximization data is found afterwards (e.g. `und-Zzzz-ZZ` -> `und`).
-        let mut stripped_placeholder = false;
+        let mut stripped_transform_result = TransformResult::Unmodified;
         if langid.script == Some(script!("Zzzz")) {
             langid.script = None;
-            stripped_placeholder = true;
+            stripped_transform_result = TransformResult::Modified;
         }
         if langid.region == Some(region!("ZZ")) {
             langid.region = None;
-            stripped_placeholder = true;
+            stripped_transform_result = TransformResult::Modified;
         }
-        let no_data_found_result = if stripped_placeholder {
-            TransformResult::Modified
-        } else {
-            TransformResult::Unmodified
-        };
 
         if !langid.language.is_unknown() && langid.script.is_some() && langid.region.is_some() {
-            return TransformResult::Unmodified;
+            return stripped_transform_result;
         }
 
         if !langid.language.is_unknown() {
@@ -413,7 +408,7 @@ impl LocaleExpander {
             }
             // Language not found: return unmodified, unless we already
             // stripped a placeholder subtag.
-            return no_data_found_result;
+            return stripped_transform_result;
         }
         if let Some(script) = langid.script {
             if let Some(region) = langid.region
@@ -442,7 +437,7 @@ impl LocaleExpander {
         // to fall back to bare "und"
         debug_assert!(langid.language.is_unknown());
 
-        no_data_found_result
+        stripped_transform_result
     }
 
     /// This returns a new Locale that is the result of running the
@@ -660,10 +655,16 @@ mod tests {
 
         // A placeholder 'Zzzz' script on the input shouldn't be returned
         // verbatim; it should be treated like no script at all.
+        // Mirrors the cases covered for `maximize` above.
         assert_eq!(
             lc.get_likely_script(&locale!("de-Zzzz").id),
             Some(script!("Latn"))
         );
+        assert_eq!(
+            lc.get_likely_script(&locale!("de-Zzzz-ZZ").id),
+            Some(script!("Latn"))
+        );
+        assert_eq!(lc.get_likely_script(&locale!("und-ZZ").id), None);
     }
 
     #[test]
